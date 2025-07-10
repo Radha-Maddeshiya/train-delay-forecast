@@ -4,12 +4,13 @@ import matplotlib.pyplot as plt
 
 df = pd.read_csv('train_15104_delay_history.csv')
 
-df['Delay_Minutes'] = df['Delay'].str.extract(r'(\d+)').astype(float)
+df['Delay_Minutes'] = df['Delay_Minutes'].astype(float)
+
 
 last_station = df['Station'].iloc[-1]
 df_station = df[df['Station'] == last_station]
 
-df_station['Date'] = pd.to_datetime(df_station['Date'])
+df_station['Date'] = pd.to_datetime(df_station['Date'], dayfirst=True)
 df_station.set_index('Date', inplace=True)
 
 delay_series = df_station['Delay_Minutes'].dropna()
