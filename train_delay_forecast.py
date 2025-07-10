@@ -5,8 +5,13 @@ import warnings
 warnings.filterwarnings("ignore")
 
 df = pd.read_csv('train_15104_delay_history.csv')
-df['Date'] = pd.to_datetime(df['Date'], dayfirst=True)
-df['Delay_Minutes'] = df['Delay_Minutes'].astype(float)
+
+df.dropna(how='all', inplace=True)
+
+df['Date'] = pd.to_datetime(df['Date'], dayfirst=True, errors='coerce')
+df['Delay_Minutes'] = pd.to_numeric(df['Delay_Minutes'], errors='coerce')
+
+df.dropna(subset=['Date', 'Delay_Minutes'], inplace=True)
 
 dates = df['Date'].tolist()
 delays = df['Delay_Minutes'].tolist()
@@ -25,6 +30,9 @@ forecast_dates = pd.date_range(start=last_date + pd.Timedelta(days=1), periods=f
 plt.figure(figsize=(12,6))
 plt.plot(dates, delays, marker='o', color='blue', label='Actual Delay')
 plt.plot(forecast_dates, forecast, marker='o', linestyle='--', color='red', label='Forecast')
+
+for i, val in enumerate(delays):
+    plt.text(dates[i], val + 2, f"{val:.1f}", ha='center', color='blue', fontsize=8)
 
 for i, val in enumerate(forecast):
     plt.text(forecast_dates[i], val + 2, f"{val:.1f}", ha='center', color='red', fontsize=8)
