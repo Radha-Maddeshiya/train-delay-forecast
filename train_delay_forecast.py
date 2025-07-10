@@ -1,35 +1,45 @@
 import pandas as pd
-from statsmodels.tsa.arima.model import ARIMA
 import matplotlib.pyplot as plt
+from statsmodels.tsa.arima.model import ARIMA
+import warnings
+warnings.filterwarnings("ignore")
 
 df = pd.read_csv('train_15104_delay_history.csv')
-
+df['Date'] = pd.to_datetime(df['Date'], dayfirst=True)
 df['Delay_Minutes'] = df['Delay_Minutes'].astype(float)
 
+dates = df['Date'].tolist()
+delays = df['Delay_Minutes'].tolist()
 
-last_station = df['Station'].iloc[-1]
-df_station = df[df['Station'] == last_station]
+df_model = df.copy()
+df_model.set_index('Date', inplace=True)
 
-df_station['Date'] = pd.to_datetime(df_station['Date'], dayfirst=True)
-df_station.set_index('Date', inplace=True)
-
-delay_series = df_station['Delay_Minutes'].dropna()
-
-model = ARIMA(delay_series, order=(1, 1, 1))
+model = ARIMA(df_model['Delay_Minutes'], order=(1, 1, 1))
 model_fit = model.fit()
 
-forecast = model_fit.forecast(steps=5)
+forecast_steps = 5
+forecast = model_fit.forecast(steps=forecast_steps)
+last_date = df['Date'].max()
+forecast_dates = pd.date_range(start=last_date + pd.Timedelta(days=1), periods=forecast_steps)
 
-print("Forecasted Delay (in minutes) for next 5 days:")
-print(forecast)
+plt.figure(figsize=(12,6))
+plt.plot(dates, delays, marker='o', color='blue', label='Actual Delay')
+plt.plot(forecast_dates, forecast, marker='o', linestyle='--', color='red', label='Forecast')
 
-plt.figure(figsize=(10,5))
-plt.plot(delay_series, label='Past Delay')
-plt.plot(pd.date_range(start=delay_series.index[-1], periods=6, freq='D')[1:], forecast, label='Forecast', color='red')
-plt.xlabel('Date')
-plt.ylabel('Delay (minutes)')
-plt.title('Train 15104 Delay Forecast')
+for i, val in enumerate(forecast):
+    plt.text(forecast_dates[i], val + 2, f"{val:.1f}", ha='center', color='red', fontsize=8)
+
+plt.title("Train 15104 Delay Forecast", fontsize=14, weight='bold')
+plt.xlabel("Date")
+plt.ylabel("Delay (minutes)")
+
+ax = plt.gca()
+all_dates = dates + list(forecast_dates)
+ax.set_xticks(all_dates)
+ax.set_xticklabels([d.strftime('%d-%b') for d in all_dates], rotation=45)
+ax.xaxis.grid(True, linestyle='--', alpha=0.5)
+ax.yaxis.grid(True, linestyle='--', alpha=0.5)
+
 plt.legend()
-plt.grid(True)
 plt.tight_layout()
 plt.show()
