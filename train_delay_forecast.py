@@ -1,17 +1,25 @@
 import pandas as pd
+import numpy as np
 import matplotlib.pyplot as plt
 from statsmodels.tsa.arima.model import ARIMA
+from sklearn.experimental import enable_iterative_imputer  
+from sklearn.impute import IterativeImputer
 import warnings
 warnings.filterwarnings("ignore")
+
 
 df = pd.read_csv('train_15104_delay_history.csv')
 df['Date'] = pd.to_datetime(df['Date'], dayfirst=True, errors='coerce')
 df['Delay_Minutes'] = pd.to_numeric(df['Delay_Minutes'], errors='coerce')
 
-df.dropna(subset=['Date', 'Delay_Minutes', 'Station'], inplace=True)
+imputer = IterativeImputer(max_iter=10, random_state=42)
+df[['Delay_Minutes']] = imputer.fit_transform(df[['Delay_Minutes']])
+
+df['Station'] = df['Station'].fillna(method='ffill')  
+
+df.dropna(subset=['Date', 'Station'], inplace=True)
 
 stations = df['Station'].drop_duplicates()
-
 station_order = {station: idx for idx, station in enumerate(stations)}
 
 forecast_steps = 5
@@ -43,7 +51,6 @@ for station in stations:
         print(f"Error forecasting for station {station}: {e}")
 
 forecast_df = pd.DataFrame(all_forecasts)
-
 forecast_df['Date'] = pd.to_datetime(forecast_df['Date'])
 forecast_df['Route_Order'] = forecast_df['Station'].map(station_order)
 forecast_df.sort_values(by=['Date', 'Route_Order'], inplace=True)
@@ -53,4 +60,3 @@ print("\nForecasted Delay (Next {} Days):\n".format(forecast_steps))
 print(forecast_df.to_string(index=False))
 
 forecast_df.to_csv('station_delay_forecast.csv', index=False)
-
